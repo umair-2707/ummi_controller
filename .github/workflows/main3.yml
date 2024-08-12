@@ -1,0 +1,70 @@
+name: python cl pipeline
+
+on: [push, pull_request]
+
+jobs: 
+  build: 
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [3.11, 3.12]
+        include:
+        # add a specific combination that isn't in the gerenal martix
+          - os: ubuntu-20.04
+            python-version: 3.11
+        exclude:
+          #exclude specific combinations
+          - os: windows-latest
+            python-version: 3.12
+          - os: macos-latest
+            python-version: 3.12
+
+      step:
+        - name: checkout code 
+          uses: actions/checkout@v4
+
+        - name: set up python ${{ martix.python-version }}
+          uses: actions/setup-python@v4
+          with:
+            python-version: ${{ martix.python-version }}
+
+        - name: install dependencies
+          run: |
+            mkdir -p test-results
+            pytest --junitxml=test-results/results.xml
+
+        - name: upload test results
+          uses: actions/upload-artifact@v3
+          with:
+            name: test_results
+            path: test-result/
+
+        - name: build project
+          run: |
+          mkdir -p build
+          echo "this is a build output for python ${{ matrix.python-version }} on ${{ martix.os }}">build/output.txt
+
+          - name: upload build artifact 
+            uses: actions/upload-artifact@v3
+            with: 
+              name: build artifacts
+              path: build/
+
+          download:
+            runs-on: ubuntu-latest
+            needs: build
+            step:
+            - name: checkouts code
+              uses: actions/downolad-artifact@v3
+              with:
+                name: test-results
+                path: download-test-results/
+
+            - name: Download build artifacts
+              run: cat download-test-result/results.xml
+
+            - name: display download build artifacts
+              run: cat download-build-artifacts/output.txt
+            
+        
