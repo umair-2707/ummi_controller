@@ -1,0 +1,16 @@
+name: trigger reusable mysql workflows
+on: 
+  push:
+    branches:
+      - main 
+jobs:
+  trigger-workflow:
+    uses: ./.github/workflows/main.yml
+    with:
+      mysql-version: '8.0'
+      new-database: 'my_dynamic_db'
+    secrets:
+      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
