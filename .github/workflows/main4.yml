@@ -1,82 +1,75 @@
 name: reusable mysql workflow
-
 on: 
   workflow_call:
-  inputs:
-    mysql-version:
-      description: 'MySQL version to use'
-      required: true
-      type: string
-      default: '8.0'
-
-    new-database:
-      description: 'name of the new database to create'
-      required: true
-      type: string
+    inputs:
+      mysql-version:
+        description: 'MySQL version to use'
+        required: true
+        type: string
+        default: '8.0'
+      new-database:
+        description: 'name of the new database to create'
+        required: true
+        type: string
     secrets:
-      MYSQL_ROOTPASSWORD:
+      MYSQL_ROOT_PASSWORD:
         description: 'root password for mysql'
+        required: true
+      MYSQL_DATABASE:
+        description: 'MySQL database name'
         required: true
       MYSQL_USER:
         description: 'MySQL user'
         required: true
-      My_SQL_PASSWORD:
+      MYSQL_PASSWORD:
         description: 'password for MYSQL user'
         required: true
 
-  jobs:
-   job-with-mysql:
-     runs-on: ubuntu-20.04
-     environment: dev
-     env: 
-       MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-       MYSQL_DATABASE: ${{ sercets.MYSQL_DATABASE }}
-       MYSQL_USER: ${{ sercets.MYSQL_USER }}
-       MYSQL_PASSWORD: ${{ sercets.MYSQL_PASSWORD }}
-       NEW_DATABASE: ${{inputs.new-database }}
-    service:
+jobs:
+  job-with-mysql:
+    runs-on: ubuntu-20.04
+    environment: dev
+    env: 
+      MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+      MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+      MYSQL_USER: ${{ secrets.MYSQL_USER }}
+      MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+      NEW_DATABASE: ${{ inputs.new-database }}
+    services:
       db:
         image: mysql:${{ inputs.mysql-version }}
         ports:
           - 3306:3306
-
         env:
-          MYSWL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
           MYSQL_USER: ${{ secrets.MYSQL_USER }}
-          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD}}
-
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         options: >-
           --health-cmd "mysqladmin ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
-        steps:
-          - name: show docker containers
-            run: docker ps -a
-
-          - name: wait for MYSQ to be ready
-            run: |
-              echo "waiting for mysql to be rady"
-              for i in (1..30); do
-                mysqladmin --protocol=tcp -h localhost -p 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} ping &> /dev/null && break
-                echo "MySQL is not yet ready yet... retrying in 2 seconds."
-                sleep 2
-              done
-          - name
-            run: |
-              mysql --protocol=tcp -h localhost -p 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "CREATE DATABASEIF NOT EXISTS ${{ inputs.new-database }};"
-              mysql --protocol=tcp -h localhost -p 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "CREATE USER IF NOT EXISTS '${{ secret.MYSQL_USER }}'@'%' IDENTIFIED BY '${{ secrets.MYSQL_PASSWORD }}';"
-              mysql --protocol=tcp -h localhost -p 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "GRANT AL PRIVILEGES ON ${{ inputs.new-database }}.* TO '${{ secrets.MYSQL_USER }}'@'%';FLUSH PRIVILEGES;"
-
-          - name: create table and insert data
-            run: |
-              mysql --protocol=tcp -h localhost -p 3306 -u ${{ secrets.MYSQL_USER }} -p${{ secrets.MYSQL_PASSWORD }} ${{ inputs.new-database }} -e "create table if not exists users (id int auto_increment primary key, name varchar(50));"
-              mysql --protocol=tcp -h localhost -p 3306 -u ${{ secrets.MYSQL_USER }} -p${{ secrets.MYSQL_PASSWORD }} ${{ inputs.new-database }} -e "insert into users (name)
-              values('Ummi'), ('Bob');"
-
-          - name: Query Data
-            run: |
-              mysql --protocol=tcp -h localhost -p 3306 -u ${{ secrets.MYSQL_PASSWORD }} ${{ inputs.new_database }} -e "SELECT * FROM users;"
-        
+    steps:
+      - name: Show docker containers
+        run: docker ps -a
+      - name: Wait for MySQL to be ready
+        run: |
+          echo "Waiting for MySQL to be ready"
+          for i in {1..30}; do
+            mysqladmin --protocol=tcp -h localhost -P 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} ping &> /dev/null && break
+            echo "MySQL is not ready yet... retrying in 2 seconds."
+            sleep 2
+          done
+      - name: Create Database and Grant Permissions
+        run: |
+          mysql --protocol=tcp -h localhost -P 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "CREATE DATABASE IF NOT EXISTS ${{ inputs.new-database }};"
+          mysql --protocol=tcp -h localhost -P 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "CREATE USER IF NOT EXISTS '${{ secrets.MYSQL_USER }}'@'%' IDENTIFIED BY '${{ secrets.MYSQL_PASSWORD }}';"
+          mysql --protocol=tcp -h localhost -P 3306 -u root -p${{ secrets.MYSQL_ROOT_PASSWORD }} -e "GRANT ALL PRIVILEGES ON ${{ inputs.new-database }}.* TO '${{ secrets.MYSQL_USER }}'@'%'; FLUSH PRIVILEGES;"
+      - name: Create table and insert data
+        run: |
+          mysql --protocol=tcp -h localhost -P 3306 -u ${{ secrets.MYSQL_USER }} -p${{ secrets.MYSQL_PASSWORD }} ${{ inputs.new-database }} -e "CREATE TABLE IF NOT EXISTS users (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(50));"
+          mysql --protocol=tcp -h localhost -P 3306 -u ${{ secrets.MYSQL_USER }} -p${{ secrets.MYSQL_PASSWORD }} ${{ inputs.new-database }} -e "INSERT INTO users (name) VALUES ('Alice'), ('Bob');"
+      - name: Query Data
+        run: |
+          mysql --protocol=tcp -h localhost -P 3306 -u ${{ secrets.MYSQL_USER }} -p${{ secrets.MYSQL_PASSWORD }} ${{ inputs.new-database }} -e "SELECT * FROM users;"
