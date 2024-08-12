@@ -42,14 +42,14 @@ jobs:
 
         - name: build project
           run: |
-          mkdir -p build
-          echo "this is a build output for python ${{ matrix.python-version }} on ${{ martix.os }}">build/output.txt
+            mkdir -p build
+            echo "this is a build output for python ${{ matrix.python-version }} on ${{ martix.os }}">build/output.txt
 
-          - name: upload build artifact 
-            uses: actions/upload-artifact@v3
-            with: 
-              name: build artifacts
-              path: build/
+        - name: upload build artifact 
+          uses: actions/upload-artifact@v3
+          with: 
+            name: build artifacts
+            path: build/
 
           download:
             runs-on: ubuntu-latest
